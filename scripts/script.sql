@@ -40,7 +40,16 @@ GROUP BY decade
 ORDER BY decade;
 
 --6) Find the player who had the most success stealing bases in 2016, where success is measured as the percentage of stolen base attempts which are successful. (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted at least 20 stolen bases.
+--Chris Owings with 91.3%
 
+SELECT  CONCAT(namefirst, ' ', namelast) AS name, (b.sb + b.cs) AS                       total_attempt, (CAST(b.sb AS numeric) / (b.sb + CAST(b.cs AS numeric))) AS successful_stolen
+FROM people AS p
+INNER JOIN batting as b
+ON p.playerid = b.playerid
+WHERE (b.sb + b.cs) >= 20
+      AND yearid = '2016'
+GROUP BY name, b.sb, b.cs
+ORDER BY successful_stolen DESC;
 --7) From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
 
 --8) Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
