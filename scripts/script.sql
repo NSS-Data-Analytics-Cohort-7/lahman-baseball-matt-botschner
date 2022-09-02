@@ -58,21 +58,22 @@ WHERE (b.sb + b.cs) >= 20
 GROUP BY name, b.sb, b.cs
 ORDER BY successful_stolen DESC;
 --7) From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? SEA with 116
-SELECT teamid, w as wins
+SELECT teamid, w as wins, yearid
 FROM teams
 WHERE yearid BETWEEN 1970 AND 2016
       AND wswin = 'N'
-Group by teamid, w
+Group by teamid, w, yearid
 Order by wins desc;
 --What is the smallest number of wins for a team that did win the world series?
 --LAN with 63 wins
-SELECT teamid, w as wins
+SELECT teamid, w as wins, yearid
 FROM teams
 WHERE yearid BETWEEN 1970 AND 2016
       AND wswin = 'Y'
-Group by teamid, w
+Group by teamid, w, yearid
 Order by wins;
---Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. less games in 1981 due to a players strike
+--Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. 
+--less games in 1981 due to a players strike
 SELECT yearid, g as games
 FROM teams
 WHERE yearid BETWEEN 1970 AND 2016
@@ -80,43 +81,63 @@ WHERE yearid BETWEEN 1970 AND 2016
 Group by yearid, g
 order by games;
 --Then redo your query, excluding the problem year. 
-SELECT teamid, w as wins
+SELECT teamid, w as wins, yearid
 FROM teams
 WHERE wswin = 'Y' 
         AND yearid BETWEEN '1970' AND '2016'
         AND yearid <> '1981'
-Group by teamid, w
+Group by teamid, w, yearid
 Order by wins;
 
 
---How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
-SELECT teamid, w as wins
+--How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time? 
+--21 times, 46.7%
+WITH most_wins AS (
+    SELECT teamid, MAX(w) AS max_wins
 FROM teams
+WHERE yearid BETWEEN '1970' AND '2016'
+        AND yearid <> '1981'
+GROUP BY teamid
+ORDER BY max_wins)
+
+SELECT t.teamid, max_wins, wswin
+FROM teams AS t
+LEFT JOIN most_wins AS m
+ON t.teamid = m.teamid
 WHERE wswin = 'Y' 
         AND yearid BETWEEN '1970' AND '2016'
         AND yearid <> '1981'
-Group by teamid, w
-Order by wins;
-
+Group by t.teamid, max_wins, wswin
+Order by max_wins;
 
 
 --8) Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance.
---LOS03 LAN, 45719
+-- "LOS03"	"LAN"	45719
+-- "STL10"	"SLN"	42524
+-- "TOR02"	"TOR"	41877
+-- "SFO03"	"SFN"	41546
+-- "CHI11"	"CHN"	39906
 SELECT park, team, (attendance/games) AS avg_attendance
 FROM homegames
 WHERE games >= 10
       AND year = 2016
 GROUP BY park, team, attendance, games
-ORDER BY avg_attendance DESC;
+ORDER BY avg_attendance DESC
+LIMIT 5;
 
 --Repeat for the lowest 5 average attendance.
---STP01 TBA 15878
+--"STP01"	"TBA"	15878
+-- "OAK01"	"OAK"	18784
+-- "CLE08"	"CLE"	19650
+-- "MIA02"	"MIA"	21405
+-- "CHI12"	"CHA"	21559
 SELECT park, team, (attendance/games) AS avg_attendance
 FROM homegames
 WHERE games >= 10
       AND year = 2016
 GROUP BY park, team, attendance, games
-ORDER BY avg_attendance;
+ORDER BY avg_attendance
+LIMIT 5;
 
 --9) Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
 --DAVEY Johnson BAL, CIN, LAN, NYN, WAS
@@ -143,6 +164,10 @@ ON p.playerid = a.playerid
 WHERE n.playerid = a.playerid;
 
 --10) Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
+WITH career AS (
+        SELECT playerid, (EXTRACT (year FROM finalgame))-(EXTRACT(year FROM debut)) AS years_played
+        FROM people
+        GROUP BY playerid)
 SELECT CONCAT (p.namefirst, ' ', p.namelast) AS name, b.hr
 FROM people AS p
 LEFT JOIN batting as b
@@ -170,5 +195,12 @@ ORDER BY s.yearid, team_salary DESC, wins;
 --12) In this question, you will explore the connection between number of wins and attendance.
 
 --a) Does there appear to be any correlation between attendance at home games and number of wins?
+
+SELECT t.yearid, t.teamid, t.w AS wins, h.attendance
+FROM teams AS t
+LEFT JOIN homegames AS h
+ON  t.yearid = h.year
+    AND t.teamid = h.team
+GROUP BY t.yearid, t.teamid, h.attenance
 --b) Do teams that win the world series see a boost in attendance the following year? What about teams that made the playoffs? Making the playoffs means either being a division winner or a wild card winner.
 --13) It is thought that since left-handed pitchers are more rare, causing batters to face them less often, that they are more effective. Investigate this claim and present evidence to either support or dispute this claim. First, determine just how rare left-handed pitchers are compared with right-handed pitchers. Are left-handed pitchers more likely to win the Cy Young Award? Are they more likely to make it into the hall of fame?
